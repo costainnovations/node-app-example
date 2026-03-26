@@ -1,49 +1,30 @@
-# Template de workflow para build e push de imagens Docker ao ECR
-# Copiar este arquivo para o repositorio da aplicacao (.github/workflows/build-push.yaml)
-#
-# Pre-requisitos:
-#   - Repositorio ECR criado (docs/aws-ecr-setup.md, passo 1)
-#   - IAM OIDC Provider configurado (passo 3)
-#   - IAM Role github-actions-ecr-push criada (passo 5)
-#   - GitHub Secret AWS_ROLE_ARN configurado (passo 7)
-#
-# Personalizar:
-#   - ECR_REPOSITORY: nome do repositorio ECR da app
-name: Build & Push to ECR
+# Pipeline CI/CD para build e deploy local no K3S
+# Roda no self-hosted runner instalado no EC2
+# Fluxo: checkout → docker build → import no K3S → rollout restart
+name: Build & Deploy
 
 on:
   push:
     branches: [main]
 
-permissions:
-  id-token: write
-  contents: read
-
-env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 412301846836.dkr.ecr.us-east-1.amazonaws.com
-  # Alterar para o nome do repositorio ECR da aplicacao
-  ECR_REPOSITORY: costa-innovations/node-app-example
-
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+      - name: Build Docker image
+        run: docker build -t node-app-example:latest .
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Import image into K3S
+        run: docker save node-app-example:latest | sudo k3s ctr images import -
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+      - name: Deploy to K3S
+        run: kubectl rollout restart deployment/node-app -n default
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/node-app -n default --timeout=120s
+
+      - name: Verify
+        run: kubectl get pods -n default -l app.kubernetes.io/name=node-app
