@@ -1,0 +1,16 @@
+{
+  "name": "node-app-example",
+  "version": "1.0.0",
+  "description": "Servico REST de exemplo para K3S stack",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "pg": "^8.16.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
+  }
+}
