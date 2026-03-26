@@ -19,7 +19,7 @@ app.get("/health", async (request, reply) => {
     return {
       status: "ok",
       timestamp: new Date().toISOString(),
-      random: Math.random() + '_testk',
+      random: Math.random(),
       database: {
         connected: true,
         time: result.rows[0].time,
