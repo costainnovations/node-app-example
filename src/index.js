@@ -4,7 +4,6 @@ const { Pool } = require("pg");
 const app = fastify({
   logger: {
     level: process.env.LOG_LEVEL || "info",
-    // Pino JSON nativo — Promtail coleta e Loki indexa automaticamente
   },
 });
 
@@ -20,6 +19,7 @@ app.get("/health", async (request, reply) => {
     return {
       status: "ok",
       timestamp: new Date().toISOString(),
+      random: Math.random(),
       database: {
         connected: true,
         time: result.rows[0].time,
