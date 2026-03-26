@@ -1,0 +1,54 @@
+# Template de workflow para build e push de imagens Docker ao ECR
+# Copiar este arquivo para o repositorio da aplicacao (.github/workflows/build-push.yaml)
+#
+# Pre-requisitos:
+#   - Repositorio ECR criado (docs/aws-ecr-setup.md, passo 1)
+#   - IAM OIDC Provider configurado (passo 3)
+#   - IAM Role github-actions-ecr-push criada (passo 5)
+#   - GitHub Secret AWS_ROLE_ARN configurado (passo 7)
+#
+# Personalizar:
+#   - ECR_REPOSITORY: nome do repositorio ECR da app
+name: Build & Push to ECR
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 412301846836.dkr.ecr.us-east-1.amazonaws.com
+  # Alterar para o nome do repositorio ECR da aplicacao
+  ECR_REPOSITORY: costa-innovations/node-app-example
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set short SHA
+        run: echo "SHA_SHORT=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.SHA_SHORT }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
